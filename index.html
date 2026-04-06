@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>2026 세전급여 정밀 역산기 생성</title>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            margin: 0;
+            display: flex;
+            min-height: 100vh;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            color: #334155;
+            position: relative;
+            overflow: hidden;
+        }
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, #3b82f6, #10b981, #3b82f6);
+            background-size: 200% auto;
+            animation: shine 3s linear infinite;
+        }
+        @keyframes shine {
+            to { background-position: 200% center; }
+        }
+        h1 {
+            font-size: 28px;
+            font-weight: 900;
+            margin-bottom: 5px;
+            background: linear-gradient(to right, #3b82f6, #10b981);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        p.subtitle {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 30px;
+        }
+        .features {
+            background: #f1f5f9;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            text-align: left;
+            font-size: 13px;
+        }
+        .features p {
+            margin: 8px 0;
+            color: #475569;
+        }
+        .features span {
+            color: #10b981;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        
+        .upload-area {
+            display: block;
+            border: 2px dashed #cbd5e1;
+            border-radius: 16px;
+            padding: 30px;
+            background: #f8fafc;
+            color: #94a3b8;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+        .upload-area:hover {
+            border-color: #3b82f6;
+            background: #eff6ff;
+            color: #3b82f6;
+        }
+        .file-input {
+            display: none;
+        }
+        
+        .gen-btn {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            border: none;
+            padding: 16px 24px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 700;
+            width: 100%;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .gen-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4);
+        }
+        .gen-btn:active {
+            transform: translateY(0);
+        }
+
+        .spinner {
+            color: #3b82f6;
+            font-weight: bold;
+            margin-top: 20px;
+            display: none;
+        }
+        .success-msg {
+            color: #10b981;
+            font-weight: bold;
+            margin-top: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>세전급여 동적 역산기</h1>
+        <p class="subtitle">2026 NTS Hometax Extractor</p>
+
+        <div class="features">
+            <p><span>✔</span> <b>4대보험:</b> 2026년 기준 정확하게 적용 (건강 3.595%, 연금 4.75%)</p>
+            <p><span>✔</span> <b>소득세:</b> 수학적 오차(3천원)를 0원 단위로 잡기 위해 국세청 엑셀 100% 매핑</p>
+        </div>
+
+        <label class="upload-area" id="uploadLabel" for="excelFile">
+            <div class="upload-text">📥 홈택스 근로소득 간이세액표 파일 업로드</div>
+            <div class="upload-subtext" style="color: #ef4444; font-weight: bold; margin-top: 5px;">※ 1원 단위까지 일치시키기 위해 홈택스 최신 엑셀 원본(1개)을 넣어주세요!</div>
+            <input type="file" id="excelFile" class="file-input" accept=".xlsx, .xls">
+        </label>
+
+        <div id="savedDataArea" style="display: none; margin-top: 20px;">
+            <p style="color: #10b981; font-weight: bold; margin-bottom: 10px;">✅ 저장된 홈택스 데이터가 내장되어 있습니다!</p>
+            
+            <div style="background: #f1f5f9; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: left; font-size: 14px; box-sizing: border-box;">
+                <p style="font-weight: bold; margin-bottom: 8px; color: #334155;">특수 케이스 면제 설정</p>
+                <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                    <input type="checkbox" id="exemptNp"> <b>만 60세 이상</b> 근로자 (국민연금 공제 면제)
+                </label>
+                <label style="display: block; cursor: pointer;">
+                    <input type="checkbox" id="exemptEi"> <b>임원 및 대표가족</b> 등 (고용보험 공제 면제)
+                </label>
+                <div style="color: #64748b; font-size: 12px; margin-top: 5px;">※ 대상자인 경우 체크하시면 해당 보험료가 0원으로 처리됩니다.</div>
+            </div>
+
+            <button id="generateBtn" class="gen-btn">
+                🚀 옵션 적용하여 엑셀 역산기 생성하기
+            </button>
+            <p style="font-size: 12px; margin-top:10px; color:#94a3b8; cursor:pointer;" onclick="clearSavedData()">🔄 홈택스 조견표 데이터 지우고 다시 업로드하기</p>
+        </div>
+
+        <div id="status" class="spinner">⏳ 데이터를 병합하여 엑셀을 생성 중입니다...</div>
+        <div id="success" class="success-msg">✅ 완벽하게 역산기가 생성 및 다운로드 되었습니다!</div>
+    </div>
+
+    <script>
+        const MAX_NP_BASE = 5900000;
+        const NP_RATE = 0.0475; // 근로자 부담분은 4.75%
+        const HI_RATE = 0.03545; // 사용자 회계 프로그램 기준 3.545%
+        const LTC_RATE = 0.1314;
+        const EI_RATE = 0.009;
+
+        let bracketMap = [];
+
+        window.onload = function() {
+            localStorage.removeItem('nts_tax_table_2026'); // 이전 오류 데이터 클리어
+            const savedData = localStorage.getItem('nts_tax_table_2026_v2');
+            if (savedData) {
+                bracketMap = JSON.parse(savedData);
+                document.getElementById('uploadLabel').style.display = 'none';
+                document.getElementById('savedDataArea').style.display = 'block';
+            }
+        }
+
+        function clearSavedData() {
+            localStorage.removeItem('nts_tax_table_2026_v2');
+            document.getElementById('uploadLabel').style.display = 'block';
+            document.getElementById('savedDataArea').style.display = 'none';
+            document.getElementById('success').style.display = 'none';
+        }
+
+        document.getElementById('generateBtn').addEventListener('click', function() {
+            if(bracketMap.length > 0) {
+                generateExcel();
+            }
+        });
+
+        document.getElementById('excelFile').addEventListener('change', handleFile, false);
+
+        function calcExactTaxOver10M(monthlyPay) {
+            const A = monthlyPay * 12;
+            const EID = 14750000 + (A - 100000000) * 0.02;
+            const EIA = A - EID;
+            const PND = A * 0.045; 
+            const SID = 3100000 + 30000000 * 0.04 - 15000000 * 0.05 - (A - 70000000) * 0.05;
+            const TB = Math.max(0, EIA - 1500000 - PND - Math.max(0, SID));
+            let CT = 0;
+            if (TB <= 150000000) CT = 15360000 + (TB - 88000000) * 0.35;
+            else if (TB <= 300000000) CT = 37060000 + (TB - 150000000) * 0.38;
+            else if (TB <= 500000000) CT = 94060000 + (TB - 300000000) * 0.40;
+            else if (TB <= 1000000000) CT = 174060000 + (TB - 500000000) * 0.42;
+            else CT = 384060000 + (TB - 1000000000) * 0.45;
+            let TC = CT > 1300000 ? 715000 + (CT - 1300000) * 0.3 : CT * 0.55;
+            const maxTC = Math.max(500000, 660000 - (A - 70000000) * 0.5);
+            TC = Math.min(TC, maxTC);
+            return Math.floor((CT - TC) / 12 / 10) * 10;
+        }
+
+        function handleFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('status').style.display = 'block';
+            document.getElementById('success').style.display = 'none';
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = e.target.result;
+                    const workbook = XLSX.read(data, {type: 'binary'});
+                    
+                    bracketMap = []; 
+                    
+                    for(let s = 0; s < workbook.SheetNames.length; s++) {
+                        const ws = workbook.Sheets[workbook.SheetNames[s]];
+                        const rows = XLSX.utils.sheet_to_json(ws, {header: 1});
+                        
+                        for(let r = 0; r < rows.length; r++) {
+                            if(!rows[r]) continue;
+                            let nums = [];
+                            for(let c = 0; c < rows[r].length; c++) {
+                                let val = rows[r][c];
+                                if (typeof val === 'string') val = val.replace(/,/g, '').trim();
+                                let num = parseFloat(val);
+                                if (!isNaN(num)) nums.push(num);
+                            }
+                            if(nums.length >= 3) {
+                                const minVal = nums[0];
+                                const maxVal = nums[1];
+                                const tax1P = nums[2];
+                                if(minVal >= 1060 && minVal <= 20000 && maxVal > minVal && tax1P >= 0) {
+                                    bracketMap.push({
+                                        min: minVal * 1000,
+                                        max: maxVal * 1000,
+                                        tax: tax1P
+                                    });
+                                }
+                            }
+                        }
+                        if (bracketMap.length > 0) break;
+                    }
+
+                    if(bracketMap.length === 0) {
+                        alert("업로드하신 파일에서 엑셀 간이세액 데이터를 찾지 못했습니다. 국세청 원본 엑셀파일을 다시 확인해주세요.");
+                        document.getElementById('status').style.display = 'none';
+                        return;
+                    }
+
+                    localStorage.setItem('nts_tax_table_2026_v2', JSON.stringify(bracketMap));
+                    
+                    document.getElementById('uploadLabel').style.display = 'none';
+                    document.getElementById('savedDataArea').style.display = 'block';
+                    generateExcel();
+
+                } catch (error) {
+                    alert('엑셀 파일 처리 중 오류가 발생했습니다.');
+                    document.getElementById('status').style.display = 'none';
+                }
+            };
+            reader.readAsBinaryString(file);
+        }
+
+        function generateExcel() {
+            document.getElementById('status').style.display = 'block';
+            document.getElementById('success').style.display = 'none';
+
+            setTimeout(() => {
+                function getIncomeTax(taxable) {
+                    if (taxable <= 1060000) return 0;
+                    for(let i=0; i<bracketMap.length; i++) {
+                        if (taxable >= bracketMap[i].min && taxable < bracketMap[i].max) {
+                            return bracketMap[i].tax;
+                        }
+                    }
+                    return calcExactTaxOver10M(taxable);
+                }
+
+                const data = [["실수령 과세(기준)", "과세 세전급여", "국민연금", "건강보험", "장기요양", "고용보험", "소득세", "지방소득세"]];
+                
+                const isExemptNp = document.getElementById('exemptNp') ? document.getElementById('exemptNp').checked : false;
+                const isExemptEi = document.getElementById('exemptEi') ? document.getElementById('exemptEi').checked : false;
+
+                const doNp = !isExemptNp;
+                const doEi = !isExemptEi;
+
+                for (let taxable = 500000; taxable <= 20000000; taxable += 1000) {
+                    const np = doNp ? (Math.floor(Math.min(taxable, MAX_NP_BASE) * NP_RATE / 10) * 10) : 0;
+                    const hi = Math.floor(taxable * HI_RATE / 10) * 10;
+                    const ltc = Math.floor(hi * LTC_RATE / 10) * 10;
+                    const ei = doEi ? (Math.floor(taxable * EI_RATE / 10) * 10) : 0;
+                    
+                    const incTax = getIncomeTax(taxable); 
+                    const locTax = Math.floor(incTax * 0.1 / 10) * 10;
+                    
+                    const deductTotal = np + hi + ltc + ei + incTax + locTax;
+                    const netTaxable = taxable - deductTotal;
+                    
+                    data.push([netTaxable, taxable, np, hi, ltc, ei, incTax, locTax]);
+                }
+
+                const newWb = XLSX.utils.book_new();
+                const wsCalcData = [
+                    ["============== 세전급여 동적 역산기 =============="],
+                    ["💰 [여기에 입력] 목표 실수령액 (총액):", 3000000], 
+                    ["🍱 [여기에 입력] 비과세 수당 (식대 등):", 200000],
+                    [],
+                    ["계산을 위한 역산 기준액:", { f: 'B2-B3' }],
+                    [],
+                    ["✅ 예상 세전급여 총액 (최종):", { f: 'B8+B3' }], 
+                    ["   - 과세대상 세전금액:", { f: 'IFERROR(VLOOKUP(B5, 데이터표!A:J, 2, TRUE), 0)' }],
+                    ["   - 비과세 수당 (그대로 반영):", { f: 'B3' }],
+                    [],
+                    ["국민연금 (4.75%)", { f: 'IFERROR(VLOOKUP(B5, 데이터표!A:J, 3, TRUE), 0)' }], 
+                    ["건강보험 (3.545%)", { f: 'IFERROR(VLOOKUP(B5, 데이터표!A:J, 4, TRUE), 0)' }], 
+                    ["장기요양 (13.14%)", { f: 'IFERROR(VLOOKUP(B5, 데이터표!A:J, 5, TRUE), 0)' }], 
+                    ["고용보험 (0.9%)", { f: 'IFERROR(VLOOKUP(B5, 데이터표!A:J, 6, TRUE), 0)' }], 
+                    ["소득세 (국세청 원본 100%)", { f: 'IFERROR(VLOOKUP(B5, 데이터표!A:J, 7, TRUE), 0)' }],
+                    ["지방소득세 (10%)", { f: 'IFERROR(VLOOKUP(B5, 데이터표!A:J, 8, TRUE), 0)' }] 
+                ];
+
+                const wsCalc = XLSX.utils.aoa_to_sheet(wsCalcData);
+                wsCalc["!cols"] = [{wch: 34}, {wch: 22}];
+
+                const wsData = XLSX.utils.aoa_to_sheet(data);
+                wsData["!cols"] = [{wch: 15},{wch: 12},{wch: 12},{wch: 12},{wch: 12},{wch: 12},{wch: 12},{wch: 12}];
+
+                XLSX.utils.book_append_sheet(newWb, wsCalc, "👉 역산 계산기");
+                XLSX.utils.book_append_sheet(newWb, wsData, "데이터표");
+
+                XLSX.writeFile(newWb, "2026_세전역산기_완벽정밀판.xlsx");
+                
+                document.getElementById('status').style.display = 'none';
+                document.getElementById('success').style.display = 'block';
+            }, 100);
+        }
+    </script>
+</body>
+</html>
