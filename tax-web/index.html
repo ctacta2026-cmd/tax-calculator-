@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0f172a">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <title>금융소득종합과세 & 건강보험료 시뮬레이터</title>
+    <style>
+        :root {
+            --primary: #8a2be2;
+            --primary-hover: #9b4dca;
+            --bg-dark: #0f172a;
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-muted: #cbd5e1;
+            --accent: #00ffcc;
+            --danger: #ff007f;
+        }
+
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+            background: var(--bg-dark);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(138, 43, 226, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(0, 255, 204, 0.1) 0px, transparent 50%);
+            color: var(--text-main);
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            background-attachment: fixed;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 25px;
+        }
+
+        /* Glassmorphism Panel */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-title {
+            grid-column: 1 / -1;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .header-title h1 {
+            font-size: 2.2rem;
+            margin: 0;
+            background: linear-gradient(135deg, #fff, #a78bfa);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Input Form */
+        .input-group {
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        input {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            padding: 12px 40px 12px 16px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-family: inherit;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(138, 43, 226, 0.2);
+        }
+
+        select {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 15px;
+            appearance: none;
+        }
+
+        .unit {
+            position: absolute;
+            right: 15px;
+            color: #888;
+            pointer-events: none;
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #888;
+            margin-top: 6px;
+            line-height: 1.4;
+        }
+
+        /* Results Area */
+        .results-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .comparisons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .result-card {
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .result-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 4px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        }
+
+        .result-card h3 {
+            margin-top: 0;
+            font-size: 1.2rem;
+            color: #fff;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.95rem;
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-item span:first-child {
+            color: var(--text-muted);
+        }
+
+        .highlight-value {
+            font-weight: bold;
+            color: var(--accent);
+            font-size: 1.1rem;
+        }
+
+        .badge {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            color: #ddd;
+        }
+
+        .detail-line {
+            font-size: 0.8rem;
+            color: #aaa;
+            text-align: right;
+            margin-top: -6px;
+            margin-bottom: 10px;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .container, .comparisons {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-title">
+            <h1>📊 금융소득 종합과세 통합 시뮬레이터</h1>
+            <p style="color: var(--text-muted); margin-top: 5px; font-size: 0.95rem;">비교과세(MAX) 수식 및 지역/직장 건보료 최신 개편안 자동 반영</p>
+        </div>
+
+        <!-- Input Menu -->
+        <aside class="glass-panel" style="align-self: start;">
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.5rem;">Gross-up 포함 정확한 비교과세 로직 적용</p>
+            
+            <div class="input-group">
+                <label>1. 일반 금융소득 (이자소득 + Gross-up 제외 배당)</label>
+                <div class="input-wrapper">
+                    <input type="text" id="fiNoGross" value="8,867,347" oninput="formatNumber(this); calculateAll();">
+                    <span class="unit">원</span>
+                </div>
+                <div class="help-text">명세서의 '(5)이자소득' + '(8)위 외의 배당소득'을 합산해 넣으세요</div>
+            </div>
+
+            <div class="input-group">
+                <label>2. 배당가산(Gross-up) 대상 배당소득</label>
+                <div class="input-wrapper">
+                    <input type="text" id="fiGross" value="39,487,181" oninput="formatNumber(this); calculateAll();">
+                    <span class="unit">원</span>
+                </div>
+                <div class="help-text" id="fi-help">명세서의 '(6)배당가산 대상배당소득'만 분리해 넣으세요</div>
+            </div>
+
+            <div class="input-group">
+                <label>3. 기납부 원천징수세액 (미리 뗀 세금)</label>
+                <div class="input-wrapper">
+                    <input type="text" id="customWithholding" value="7,446,597" oninput="formatNumber(this); calculateAll();">
+                    <span class="unit">원</span>
+                </div>
+                <div class="help-text">계산표의 원천징수 합계액을 직접 입력하세요</div>
+            </div>
+
+            <div class="input-group">
+                <label>4. 위 1,2번 외 타소득 (근로/사업/기타 등 합계)</label>
+                <div class="input-wrapper">
+                    <input type="text" id="oi" value="79,995,830" oninput="formatNumber(this); calculateAll();">
+                    <span class="unit">원</span>
+                </div>
+            </div>
+
+            <div class="input-group" id="salaryIncomeGroup" style="background: rgba(255, 0, 127, 0.05); border-left: 3px solid #ff007f; padding-left: 10px;">
+                <label id="salaryIncomeLabel">↪ 위 타소득 중 '근로소득(직장 급여)' 금액</label>
+                <div class="input-wrapper">
+                    <input type="text" id="salaryIncome" value="79,995,830" oninput="formatNumber(this); calculateAll();">
+                    <span class="unit">원</span>
+                </div>
+                <div class="help-text" id="salaryIncomeHelp" style="color: #ff8df0;">직장에서 이미 건보료를 원천징수하므로 중복 합산에서 제외합니다.</div>
+            </div>
+
+            <div class="input-group">
+                <label>근로/기타 종합 소득공제 (본인공제 등 합계)</label>
+                <div class="input-wrapper">
+                    <input type="text" id="ded" value="5,000,000" oninput="formatNumber(this); calculateAll();">
+                    <span class="unit">원</span>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>그 외 세액공제 (연금저축 등)</label>
+                <div class="input-wrapper">
+                    <input type="text" id="cre" value="0" oninput="formatNumber(this); calculateAll();">
+                    <span class="unit">원</span>
+                </div>
+                <div class="help-text">표준세액공제(7만원)는 프로그램이 자동 합산합니다</div>
+            </div>
+
+            <div class="input-group">
+                <label>건보료율 (장기요양 포함 합산비율)</label>
+                <div class="input-wrapper">
+                    <input type="number" id="customHiRate" value="8.134766" step="0.000001" oninput="calculateAll();" style="text-align: right; padding-right: 2.5rem;">
+                    <span class="unit">%</span>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>건강보험 가입자 유형</label>
+                <div class="input-wrapper">
+                    <select id="subType" onchange="toggleRegionalInputs(); calculateAll();">
+                        <option value="workplace">직장 가입자 (보수외 소득)</option>
+                        <option value="regional">지역 가입자 (재산/소득 점수제)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="input-group" id="regionalPropGroup" style="display: none; background: rgba(0, 255, 204, 0.05); border-left: 3px solid #00ffcc; padding-left: 10px; margin-top: 15px;">
+                <label>🏘️ 재산세 과세표준액 (지역가입자 전용)</label>
+                <div class="input-wrapper">
+                    <input type="text" id="propBase" value="0" oninput="formatNumber(this); calculateAll();">
+                    <span class="unit">원</span>
+                </div>
+                <div class="help-text" style="color: #6ee7b7;">아파트/주택/토지 가액. (2024년 기준 1억 원 기본공제는 프로그램이 자동 처리합니다)</div>
+            </div>
+        </aside>
+
+        <!-- Results Area -->
+        <main class="results-container">
+            <div class="comparisons">
+                <!-- Case 1: No Financial Income -->
+                <div class="glass-panel result-card">
+                    <h3>💡 금융소득이 없는 경우 (타소득 단구간)</h3>
+                    <div class="result-item">
+                        <span>종합소득 과세표준</span>
+                        <span id="noFiStd">0 원</span>
+                    </div>
+                    <div class="result-item">
+                        <span>산출세액 (기본 종소세)</span>
+                        <span id="noFiCalcTax">0 원</span>
+                    </div>
+                    <div class="result-item">
+                        <span>최종 결정세액 (공제 후)</span>
+                        <span id="noFiIncomeTax">0 원</span>
+                    </div>
+                    <div class="result-item">
+                        <span>지방소득세 (결정의 10%)</span>
+                        <span id="noFiLocalTax">0 원</span>
+                    </div>
+                    <div class="result-item" style="border-top: 1px dashed var(--glass-border); padding-top: 1rem; margin-top: 0.5rem;">
+                        <span>건보 합산 대상 소득 총액</span>
+                        <span id="noFiHiBase">0 원</span>
+                    </div>
+                    <div class="result-item">
+                        <span id="noFiHiLabel">기본/보수외 건보료 대상금</span>
+                        <span id="noFiHi">0 원</span>
+                    </div>
+                </div>
+
+                <!-- Case 2: With Financial Income -->
+                <div class="glass-panel result-card" style="box-shadow: 0 0 20px rgba(138,43,226,0.3);">
+                    <h3>🚀 금융소득이 추가된 경우</h3>
+                    <div class="result-item">
+                        <span>총 금융소득 금액</span>
+                        <span id="yesFiTotal">0 원</span>
+                    </div>
+                    <div class="result-item" style="border-top: 1px dashed var(--glass-border); padding-top: 0.8rem; margin-top: 0.6rem;">
+                        <span>종합소득 산출세액</span>
+                        <span id="yesFiCalcTax" class="highlight-value" style="color: #fff !important;">0 원</span>
+                    </div>
+                    <div id="compTaxBadge" style="text-align: right; margin-bottom: 5px; display: none;">
+                        <span class="badge" style="background:#8a2be2;">비교과세(MAX) 적용됨</span>
+                    </div>
+                    <div class="result-item">
+                        <span>총 세액공제 (배당+포함)</span>
+                        <span id="yesFiCredits">0 원</span>
+                    </div>
+                    
+                    <div class="result-item" style="border-top: 1px solid var(--glass-border); padding-top: 0.8rem;">
+                        <span>결정세액 (최종 종소세)</span>
+                        <span id="yesFiIncomeTax" class="highlight-value">0 원</span>
+                    </div>
+                    <div class="result-item">
+                        <span>지방소득세 (10%)</span>
+                        <span id="yesFiLocalTax">0 원</span>
+                    </div>
+                    
+                    <div class="result-item" style="border-top: 1px dashed var(--glass-border); padding-top: 1rem; margin-top: 0.2rem;">
+                        <span>건강보험료 합산 기준액</span>
+                        <span id="yesFiHiBase">0 원</span>
+                    </div>
+                    <div class="result-item">
+                        <span>건강보험료 부과 예상액</span>
+                        <span id="yesFiHi" class="highlight-value" style="color:#ff007f !important;">0 원</span>
+                    </div>
+                    <div id="hiNoAddBadge" style="text-align: right; margin-top: -10px; margin-bottom: 5px; display: none;">
+                        <span class="badge" style="background:#444;">1,000만 이하 건보 합산 제외됨</span>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 1.5rem;">
+                        <button onclick="toggleDetails()" style="background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); color: #fff; padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.9rem; transition: background 0.2s;">
+                            📄 계산 상세 근거 보기 / 숨기기
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calculation Detail Box (Hidden by default) -->
+            <div id="calcDetailBox" class="glass-panel" style="display: none; background: rgba(0,0,0,0.4); border: 1px solid #444;">
+                <h3 style="font-size: 1.1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;">📝 상세 세금 산출 공식 내역</h3>
+                <pre id="calcDetailText" style="white-space: pre-wrap; font-family: monospace; color: #ddd; font-size: 0.95rem; line-height: 1.6; margin-top: 1rem;"></pre>
+            </div>
+
+            <!-- Final Diff -->
+            <div class="final-difference glass-panel" style="margin-top: 1rem;">
+                <h2 style="font-size: 1.4rem; color: #fff;">✅ 직관적 비교: 그래서 새로 돈이 얼마나 더 나가나요?</h2>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 2rem; background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                    <div style="text-align: center; border-right: 1px solid rgba(255,255,255,0.1);">
+                        <div style="color: #bbb; font-size: 0.95rem; margin-bottom: 0.5rem;">① 5월 종합소득세 신고 시 <b style="color:#00ffcc">추가 납부세액</b></div>
+                        <div id="mayPayTax" style="font-size: 2.2rem; font-weight: bold; color: #00ffcc;">0 원</div>
+                        <div id="refundNotice" style="font-size: 0.85rem; color: #ff007f; display: none; margin-top: 0.3rem;">(오히려 환급받습니다!)</div>
+                        <div id="sepTaxEndNotice" style="font-size: 0.85rem; color: #bbb; display: none; margin-top: 0.3rem;">(분리과세로 종결되어 5월 추가납부면제)</div>
+                        <div style="color: #888; font-size: 0.8rem; margin-top: 1.5rem; line-height: 1.4;">
+                            * 원천징수로 이미 낸 세금 <span id="withheldAmount">0원</span> 제외 완료<br>
+                            (경제적 기회비용 총 세액 증가분: <span id="diffTaxTotal">0 원</span>)
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <div style="color: #bbb; font-size: 0.9rem; margin-bottom: 0.5rem;">② 연간 건강보험료 추가 상승분</div>
+                        <div id="diffHi" style="font-size: 2.2rem; font-weight: bold; color: #ff8df0;">0 원</div>
+                        <div style="margin-top: 1.5rem; background: rgba(255,255,255,0.1); padding: 0.8rem; border-radius: 8px;">
+                            <div style="color: #fff; font-size: 0.9rem; margin-bottom: 0.3rem;">👉 건보료율 변동 반영 후</div>
+                            <div style="font-size: 1.3rem; font-weight: 700; color: #ddd;">월 약 <span id="diffHiMonthly">0 원</span> 증가</div>
+                        </div>
+                        <div style="margin-top: 1rem;">
+                            <a href="https://www.nhis.or.kr/nhis/minwon/retrieveLocalCalcView.do" target="_blank" style="display:inline-block; padding: 0.6rem 1rem; background: rgba(0, 82, 164, 0.8); color: #fff; text-decoration: none; border-radius: 6px; font-size: 0.85rem; border: 1px solid rgba(255,255,255,0.2); transition: all 0.2s;">
+                                🏥 정확한 건보료 공식 모의계산기 열기
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grand Total Combine -->
+                <div style="margin-top: 1.5rem; text-align: center; background: rgba(0,0,0,0.4); padding: 1.5rem; border-radius: 12px; border: 1px dashed rgba(255,255,255,0.2);">
+                    <div style="color: #ddd; font-size: 1.1rem; margin-bottom: 0.5rem;">🔥 최종 합계 (5월 납부세액 + 연간 건보료 인상분) 🔥</div>
+                    <div id="grandTotal" style="font-size: 2.5rem; font-weight: 900; color: #ffeb3b; text-shadow: 0 0 10px rgba(255, 235, 59, 0.4);">0 원</div>
+                    <div style="color: #aaa; font-size: 0.85rem; margin-top: 0.5rem;">새롭게 주머니에서 나가야 할 순수 총합금액입니다</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function toggleRegionalInputs() {
+            const isWorkplace = document.getElementById('subType').value === 'workplace';
+            document.getElementById('regionalPropGroup').style.display = isWorkplace ? 'none' : 'block';
+            
+            const salGroup = document.getElementById('salaryIncomeGroup');
+            const salLabel = document.getElementById('salaryIncomeLabel');
+            const salHelp = document.getElementById('salaryIncomeHelp');
+            
+            if (isWorkplace) {
+                salGroup.style.background = 'rgba(255, 0, 127, 0.05)';
+                salGroup.style.borderLeft = '3px solid #ff007f';
+                salLabel.innerText = "↪ 위 타소득 중 '근로소득(직장 급여)' 금액";
+                salHelp.innerText = "직장에서 이미 건보료를 원천징수하므로 중복 합산에서 제외합니다.";
+                salHelp.style.color = '#ff8df0';
+            } else {
+                salGroup.style.background = 'rgba(0, 255, 204, 0.05)';
+                salGroup.style.borderLeft = '3px solid #00ffcc';
+                salLabel.innerText = "↪ 위 타소득 중 '근로 및 연금소득' 금액";
+                salHelp.innerText = "지역가입자는 근로/연금소득에 대해 건보료 평가 시 50%만 반영됩니다.";
+                salHelp.style.color = '#6ee7b7';
+            }
+        }
+
+        function toggleDetails() {
+            const box = document.getElementById('calcDetailBox');
+            box.style.display = box.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function formatNumber(input) {
+            let val = input.value.replace(/[^\d]/g, '');
+            if (val === '') val = '0';
+            input.value = parseInt(val, 10).toLocaleString('ko-KR');
+        }
+
+        function toKRW(num) {
+            return Math.floor(Math.max(0, num)).toLocaleString('ko-KR') + ' 원';
+        }
+
+        function getTax(income) {
+            if (income <= 0) return 0;
+            if (income <= 14000000) return income * 0.06;
+            if (income <= 50000000) return income * 0.15 - 1260000;
+            if (income <= 88000000) return income * 0.24 - 5760000;
+            if (income <= 150000000) return income * 0.35 - 15440000;
+            if (income <= 300000000) return income * 0.38 - 19940000;
+            if (income <= 500000000) return income * 0.40 - 25940000;
+            if (income <= 1000000000) return income * 0.42 - 35940000;
+            return income * 0.45 - 65940000;
+        }
+
+        function getTaxBracketStr(income) {
+            if (income <= 0) return "0%";
+            if (income <= 14000000) return "6%";
+            if (income <= 50000000) return "15%";
+            if (income <= 88000000) return "24%";
+            if (income <= 150000000) return "35%";
+            if (income <= 300000000) return "38%";
+            if (income <= 500000000) return "40%";
+            if (income <= 1000000000) return "42%";
+            return "45%";
+        }
+
+        function getVal(id) {
+            return parseInt(document.getElementById(id).value.replace(/,/g, '')) || 0;
+        }
+
+        function getFloatVal(id, defaultVal) {
+            let v = parseFloat(document.getElementById(id).value);
+            return isNaN(v) ? defaultVal : v;
+        }
+
+        // 2024 지역가입자 재산 점수 도출 (근사/부분 하드코딩 알고리즘)
+        function getPropertyScore(propBase) {
+            // 2024년 2월 이후 개편: 1억원 기본공제 적용
+            let val = propBase - 100000000;
+            if (val <= 0) return 0;
+            
+            // 1~7등급 (세밀 구간)
+            if (val <= 4500000) return 22;
+            if (val <= 9000000) return 31;
+            if (val <= 13500000) return 41;
+            if (val <= 18000000) return 51;
+            if (val <= 22500000) return 61;
+            if (val <= 27000000) return 71;
+            if (val <= 31500000) return 81;
+            
+            // 최상위 이상 (77억 8124만원 초과 60등급 최대 점수)
+            if (val > 7781240000) return 3282;
+
+            // 중상위 점수 근사 계산: 약 100만원당 1.85 ~ 0.5점까지 선형으로 완만해짐
+            // 여기서는 통계적으로 재산점수표에 극히 근접한 보간식을 사용합니다 (*공식표 대비 약간의 오차 존재 가능)
+            let baseScore = 81;
+            let offset = val - 31500000;
+            let addedScore = (offset / 10000000) * 19.5; 
+            if(offset > 100000000) addedScore = (100000000 / 10000000) * 19.5 + ((offset-100000000) / 10000000) * 11;
+            if(offset > 500000000) addedScore = (100000000 / 10000000) * 19.5 + (400000000 / 10000000) * 11 + ((offset-500000000) / 10000000) * 4.5;
+            
+            return Math.floor(Math.min(3282, baseScore + addedScore));
+        }
+
+        // 2024 지역가입자 소득 점수 계산
+        function getIncomeScore(income) {
+            if (income <= 0) return 0; // 피부양자 등 사실상 0
+            if (income <= 3360000) return 95.259; // 336만원 이하 최저보험료
+            return 95.259 + ((income - 3360000) / 10000) * 0.28350939; 
+        }
+
+        function calcScenario(fiNoGross, fiGross, oi, ded, exCre, customWithholding, salaryIncome, isWorkplace, hiRatePercent, propBase) {
+            let fiAmount = fiNoGross + fiGross;
+            let withholdingTax = customWithholding; 
+            let standardCredit = 70000; 
+            let cre = standardCredit + exCre; 
+            
+            let taxStdForUI = 0;
+            let calculatedTax = 0; 
+            let incomeTax = 0; 
+            let localTax = 0; 
+            
+            let isComparative = false;
+            let appliedGrossUp = 0;
+            let appliedDivCredit = 0;
+            let explanation = "";
+
+            if (fiAmount <= 20000000) {
+                taxStdForUI = Math.max(0, oi - ded);
+                calculatedTax = getTax(taxStdForUI);
+                incomeTax = Math.max(0, calculatedTax - cre);
+                localTax = Math.floor(incomeTax * 0.1);
+                
+                let totalTaxBurden = incomeTax + localTax + withholdingTax; 
+                
+                explanation += "※ 금융소득 2,000만 원 이하로 [분리과세] 적용 (금융소득은 원천징수로 신고종결)\n\n";
+                explanation += `과세표준 (타소득) = 타소득(${toKRW(oi)}) - 소득공제(${toKRW(ded)}) = ${toKRW(taxStdForUI)}\n`;
+                explanation += `종합소득 산출세액 = ${toKRW(taxStdForUI)}의 누진세율(${getTaxBracketStr(taxStdForUI)}) = ${toKRW(calculatedTax)}\n`;
+                explanation += `세액공제 차감 = 표준/기타공제 합계(${toKRW(cre)}) 차감\n`;
+                explanation += `최종 결정세액 = ${toKRW(incomeTax)} (추가 지방소득세: ${toKRW(localTax)})\n`;
+                explanation += `(별도 금융소득 원천징수분: ${toKRW(withholdingTax)} 수동입력됨)\n`;
+
+                let hiRate = hiRatePercent / 100.0; 
+                let fiForHi = fiAmount > 10000000 ? fiAmount : 0;
+                let addedHi = 0;
+                let hiBase = 0;
+                
+                if (isWorkplace) {
+                    hiBase = Math.max(0, oi - salaryIncome) + fiForHi;
+                    if (hiBase > 20000000) addedHi = Math.max(0, hiBase - 20000000) * hiRate;
+                } else {
+                    // 지역가입자 점수제 부과체계 (2024년 개편 기준 적용)
+                    // 소득: 근로/연금 50%, 나머지 100% 반영
+                    let evalIncome = (oi - salaryIncome) + (salaryIncome * 0.5) + fiForHi;
+                    hiBase = evalIncome; // 결과표시용 합산기준액
+                    
+                    let incomePoint = getIncomeScore(evalIncome);
+                    let propPoint = getPropertyScore(propBase);
+                    let totalPoint = incomePoint + propPoint;
+                    
+                    // 2024년 건강보험료 점수당 208.4 원
+                    let healthInsPremium = Math.floor(totalPoint * 208.4);
+                    // 장기요양보험료 = 건강보험료의 12.95% (2024년 요율)
+                    let ltcPremium = Math.floor(healthInsPremium * 0.1295);
+                    
+                    addedHi = healthInsPremium + ltcPremium;
+
+                    explanation += "💡 [지역가입자 건강보험료 점수제 계산내역]\n";
+                    explanation += `- 평가대상 소득 (근로50%, 타소득100%): ${toKRW(evalIncome)}\n`;
+                    explanation += `- 소득 점수: ${incomePoint.toFixed(2)} 점\n`;
+                    explanation += `- 재산 과세표준(1억 공제 후): ${toKRW(Math.max(0, propBase - 100000000))}\n`;
+                    explanation += `- 재산 점수: ${propPoint} 점\n`;
+                    explanation += `- 월 건강보험료: (총 ${totalPoint.toFixed(2)}점 × 208.4원) = 월 ${toKRW(healthInsPremium)}\n`;
+                    explanation += `- 월 장기요양보험료: (건보료의 12.95%) = 월 ${toKRW(ltcPremium)}\n`;
+                    explanation += `- 지역가입자 연간 총 건보료 = ${toKRW(addedHi * 12)}\n\n`;
+                    
+                    // 1년치 합산액을 리턴하게 됨 (기존 직장가입자는 연간 기준으로 addedHi가 됨)
+                    // 기존 수식의 hiRate 연간적용을 보정하기 위해 addedHi *= 12 처리. 
+                    // Wait, existing UI assumes 'addedHi' is annual.
+                    addedHi = addedHi * 12;
+                }
+
+                return {
+                    fiAmount, withholdingTax, calculatedTax, incomeTax, localTax, totalTaxBurden, addedHi,
+                    taxStdForUI, isComparative, appliedGrossUp, appliedDivCredit, totalCreditsApplied: cre, hiBase, explanation
+                };
+            } else {
+                isComparative = true;
+                let grossUpBase = Math.min(fiGross, Math.max(0, fiAmount - 20000000));
+                appliedGrossUp = Math.floor(grossUpBase * 0.11); 
+                
+                let stdGen = Math.max(0, oi + fiAmount - 20000000 + appliedGrossUp - ded);
+                let calcGen = (20000000 * 0.14) + getTax(stdGen);
+
+                let stdComp = Math.max(0, oi - ded);
+                let calcComp = (fiAmount * 0.14) + getTax(stdComp);
+
+                calculatedTax = Math.max(calcGen, calcComp);
+                taxStdForUI = stdGen + 20000000;
+
+                appliedDivCredit = Math.max(0, Math.min(appliedGrossUp, calculatedTax - calcComp));
+                let totalCreditsApplied = appliedDivCredit + cre;
+
+                incomeTax = Math.max(0, calculatedTax - totalCreditsApplied);
+                localTax = Math.floor(incomeTax * 0.1);
+                let totalTaxBurden = incomeTax + localTax;
+
+                explanation += "※ 금융소득 2,000만 원 초과로 **[비교과세]** 로직 적용 (아래 1, 2 중 큰 금액을 세금으로 채택)\n\n";
+                explanation += `* 배당가산액(Gross-up): 배당소득 중 한도적용액의 11% = ${toKRW(appliedGrossUp)}\n\n`;
+                
+                explanation += `[1번: 일반 종합과세 방식]\n`;
+                explanation += `- 근거: 2천만원×14% + 2천만원 초과분에 대한 누진세\n`;
+                explanation += `- 과세표준: 타소득(${toKRW(oi)}) + 금융소득초과분(${toKRW(fiAmount - 20000000)}) + 가산액(${toKRW(appliedGrossUp)}) - 공제(${toKRW(ded)}) = ${toKRW(stdGen)}\n`;
+                explanation += `- 산출세액: 280만 원 + 누진세율(${getTaxBracketStr(stdGen)}) ${toKRW(getTax(stdGen))} = ${toKRW(calcGen)}\n\n`;
+
+                explanation += `[2번: 일반 분리과세 방식]\n`;
+                explanation += `- 근거: 소득세 분리과세율 14% 적용 + 타소득누진세\n`;
+                explanation += `- 타소득 과세표준 = ${toKRW(stdComp)}\n`;
+                explanation += `- 산출세액: 총금융소득×14%(${toKRW(fiAmount * 0.14)}) + 누진세율(${getTaxBracketStr(stdComp)}) ${toKRW(getTax(stdComp))} = ${toKRW(calcComp)}\n\n`;
+
+                explanation += `[최종 종소세 결정]\n`;
+                explanation += `=> 두 방식 중 더 큰 금액인 ${toKRW(calculatedTax)} 을(를) 산출세액으로 채택했습니다.\n`;
+                explanation += `- 세액공제: 배당세액공제 역산액(${toKRW(appliedDivCredit)}) + 기초세액공제(${toKRW(cre)}) = ${toKRW(totalCreditsApplied)}\n`;
+                explanation += `- 최종 결정세액: 산출세액 - 세액공제 = ${toKRW(incomeTax)}\n`;
+                explanation += `- 지방소득세(10% 별도): ${toKRW(localTax)}\n`;
+
+                let hiRate = hiRatePercent / 100.0; 
+                let fiForHi = fiAmount; 
+                let addedHi = 0;
+                let hiBase = 0;
+
+                if (isWorkplace) {
+                    hiBase = Math.max(0, oi - salaryIncome) + fiForHi;
+                    if (hiBase > 20000000) addedHi = Math.max(0, hiBase - 20000000) * hiRate;
+                } else {
+                    let evalIncome = (oi - salaryIncome) + (salaryIncome * 0.5) + fiForHi;
+                    hiBase = evalIncome; 
+                    
+                    let incomePoint = getIncomeScore(evalIncome);
+                    let propPoint = getPropertyScore(propBase);
+                    let totalPoint = incomePoint + propPoint;
+                    
+                    let healthInsPremium = Math.floor(totalPoint * 208.4);
+                    let ltcPremium = Math.floor(healthInsPremium * 0.1295);
+                    
+                    addedHi = healthInsPremium + ltcPremium;
+
+                    explanation += "💡 [지역가입자 건강보험료 점수제 계산내역]\n";
+                    explanation += `- 평가대상 소득 (근로50%, 타소득100%): ${toKRW(evalIncome)}\n`;
+                    explanation += `- 소득 점수: ${incomePoint.toFixed(2)} 점\n`;
+                    explanation += `- 재산 과세표준(1억 공제 후): ${toKRW(Math.max(0, propBase - 100000000))}\n`;
+                    explanation += `- 재산 점수: ${propPoint} 점\n`;
+                    explanation += `- 월 건강보험료: (총 ${totalPoint.toFixed(2)}점 × 208.4원) = 월 ${toKRW(healthInsPremium)}\n`;
+                    explanation += `- 월 장기요양보험료: (건보료의 12.95%) = 월 ${toKRW(ltcPremium)}\n`;
+                    explanation += `- 지역가입자 연간 총 건보료 = ${toKRW(addedHi * 12)}\n\n`;
+                    
+                    addedHi = addedHi * 12; // Yearly conversion
+                }
+
+                return {
+                    fiAmount, withholdingTax, calculatedTax, incomeTax, localTax, totalTaxBurden, addedHi,
+                    taxStdForUI, isComparative, appliedGrossUp, appliedDivCredit, totalCreditsApplied, hiBase, explanation
+                };
+            }
+        }
+
+        function calculateAll() {
+            const fiNoGross = getVal('fiNoGross');
+            const fiGross = getVal('fiGross');
+            const customWithholding = getVal('customWithholding');
+            const oi = getVal('oi');
+            const salaryIncome = getVal('salaryIncome');
+            const ded = getVal('ded');
+            const cre = getVal('cre'); 
+            const customHiRate = getFloatVal('customHiRate', 8.134766); 
+            const isWorkplace = document.getElementById('subType').value === 'workplace';
+            const propBase = isWorkplace ? 0 : getVal('propBase');
+
+            const noFi = calcScenario(0, 0, oi, ded, cre, 0, salaryIncome, isWorkplace, customHiRate, propBase);
+            document.getElementById('noFiStd').innerText = toKRW(noFi.taxStdForUI);
+            document.getElementById('noFiCalcTax').innerText = toKRW(noFi.calculatedTax);
+            document.getElementById('noFiIncomeTax').innerText = toKRW(noFi.incomeTax);
+            document.getElementById('noFiLocalTax').innerText = toKRW(noFi.localTax);
+            document.getElementById('noFiHiBase').innerText = toKRW(isWorkplace ? Math.max(0, oi - salaryIncome) : oi);
+            
+            if(isWorkplace) {
+                document.getElementById('noFiHiLabel').innerText = "보수외 직장건보료 기준액";
+                document.getElementById('noFiHi').innerText = (Math.max(0, oi - salaryIncome)) <= 20000000 ? "0 원" : toKRW(noFi.addedHi);
+            } else {
+                document.getElementById('noFiHiLabel').innerText = "기본 예상 지역건보료액";
+                document.getElementById('noFiHi').innerText = toKRW(noFi.addedHi);
+            }
+
+            const yesFi = calcScenario(fiNoGross, fiGross, oi, ded, cre, customWithholding, salaryIncome, isWorkplace, customHiRate, propBase);
+            document.getElementById('yesFiTotal').innerText = toKRW(yesFi.fiAmount);
+            document.getElementById('yesFiCalcTax').innerText = toKRW(yesFi.calculatedTax);
+            document.getElementById('yesFiCredits').innerText = toKRW(yesFi.totalCreditsApplied);
+            document.getElementById('yesFiIncomeTax').innerText = toKRW(yesFi.incomeTax);
+            document.getElementById('yesFiLocalTax').innerText = toKRW(yesFi.localTax);
+            document.getElementById('calcDetailText').innerText = yesFi.explanation;
+            
+            document.getElementById('yesFiHiBase').innerText = toKRW(yesFi.hiBase);
+            document.getElementById('yesFiHi').innerText = yesFi.hiBase <= 20000000 && isWorkplace ? "0 원" : toKRW(yesFi.addedHi);
+            
+            document.getElementById('compTaxBadge').style.display = yesFi.isComparative ? 'inline-block' : 'none';
+            document.getElementById('hiNoAddBadge').style.display = (yesFi.fiAmount > 0 && yesFi.fiAmount <= 10000000) ? 'inline-block' : 'none';
+
+            const diffTax = Math.max(0, yesFi.totalTaxBurden - noFi.totalTaxBurden);
+            document.getElementById('diffTaxTotal').innerText = toKRW(diffTax);
+            document.getElementById('withheldAmount').innerText = toKRW(yesFi.withholdingTax);
+            
+            let mayDirectPay = yesFi.isComparative ? (diffTax - yesFi.withholdingTax) : 0;
+            const refundNotice = document.getElementById('refundNotice');
+            const sepTaxEndNotice = document.getElementById('sepTaxEndNotice');
+            
+            if (mayDirectPay < 0) {
+                document.getElementById('mayPayTax').innerText = toKRW(Math.abs(mayDirectPay));
+                document.getElementById('mayPayTax').style.color = '#ff007f';
+                refundNotice.style.display = 'block';
+                sepTaxEndNotice.style.display = 'none';
+            } else if (!yesFi.isComparative && fiNoGross+fiGross > 0) {
+                mayDirectPay = 0;
+                document.getElementById('mayPayTax').innerText = "0 원";
+                document.getElementById('mayPayTax').style.color = '#ddd';
+                refundNotice.style.display = 'none';
+                sepTaxEndNotice.style.display = 'block';
+            } else {
+                document.getElementById('mayPayTax').innerText = toKRW(mayDirectPay);
+                document.getElementById('mayPayTax').style.color = '#00ffcc';
+                refundNotice.style.display = 'none';
+                sepTaxEndNotice.style.display = 'none';
+            }
+
+            const diffHi = Math.max(0, yesFi.addedHi - noFi.addedHi);
+            document.getElementById('diffHi').innerText = toKRW(diffHi);
+            document.getElementById('diffHiMonthly').innerText = toKRW(diffHi / 12);
+
+            let grandTotal = mayDirectPay + diffHi;
+            if(grandTotal < 0) grandTotal = 0; 
+            document.getElementById('grandTotal').innerText = toKRW(mayDirectPay + diffHi);
+            
+            saveToLocal();
+        }
+
+        function saveToLocal() {
+            const data = {
+                fiNoGross: document.getElementById('fiNoGross').value,
+                fiGross: document.getElementById('fiGross').value,
+                customWithholding: document.getElementById('customWithholding').value,
+                oi: document.getElementById('oi').value,
+                salaryIncome: document.getElementById('salaryIncome').value,
+                ded: document.getElementById('ded').value,
+                cre: document.getElementById('cre').value,
+                subType: document.getElementById('subType').value,
+                propBase: document.getElementById('propBase').value
+            };
+            localStorage.setItem('taxCalcData2024', JSON.stringify(data));
+        }
+
+        function loadFromLocal() {
+            const saved = localStorage.getItem('taxCalcData2024');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    if (data.fiNoGross) document.getElementById('fiNoGross').value = data.fiNoGross;
+                    if (data.fiGross) document.getElementById('fiGross').value = data.fiGross;
+                    if (data.customWithholding) document.getElementById('customWithholding').value = data.customWithholding;
+                    if (data.oi) document.getElementById('oi').value = data.oi;
+                    if (data.salaryIncome) document.getElementById('salaryIncome').value = data.salaryIncome;
+                    if (data.ded) document.getElementById('ded').value = data.ded;
+                    if (data.cre) document.getElementById('cre').value = data.cre;
+                    if (data.subType) document.getElementById('subType').value = data.subType;
+                    if (data.propBase) document.getElementById('propBase').value = data.propBase;
+                    toggleRegionalInputs();
+                } catch (e) {}
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFromLocal();
+            calculateAll();
+        });
+
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(registration => {
+                        console.log('SW registered:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('SW registration failed:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
